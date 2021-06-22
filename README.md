@@ -14,4 +14,4 @@ Please cite as:
 [Rasmusson, A.J., et al. "Machine learning estimation of optimal resolved sideband cooling strategies." Bulletin of the American Physical Society (2021).](https://meetings.aps.org/Meeting/DAMOP21/Session/Z05.3)
 
 ### 2D Ion Crystal Formation
-In the [Richerme lab](https://iontrap.physics.indiana.edu), we focus on trapping ions in 2D crystals (they're most commonly trapped in 1D chains). This project will eventually compute the normal transverse modes of a 2D crystal. Currently, I'm optimizing how the ion's equilibrium positions are determined.
+In the [Richerme lab](https://iontrap.physics.indiana.edu), we focus on trapping ions in 2D crystals (they're most commonly trapped in 1D chains). This project will eventually compute the transverse modes of a 2D crystal. Currently, I'm optimizing how the ion's equilibrium positions are determined.
