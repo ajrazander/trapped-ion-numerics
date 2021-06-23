@@ -91,16 +91,17 @@ plt.show()
 epsilon_0 = 8.8541878128e-12
 
 # number of ions
-N = 5
+N = 7
 
 # harmonic frequencies
 wx = 2 * np.pi * 0.35e6
-wy = wx
+wy = wx*1.01
 wz = 2 * np.pi * 0.895e6
 print('alpha', wz/wx)
-
+e=Q
 @jit(nopython=True, fastmath=True)
-def potential_energy(positions, wx=wx, wy=wy, wz=wz, N=N, m=m, e=Q, epsilon_0=epsilon_0):
+def potential_energy(positions):
+    # wx, wy, wz, N, m, e, epsilon_0 = params
     xs = positions[:N]
     ys = positions[N:2*N]
     zs = positions[2*N:3*N]
@@ -126,6 +127,8 @@ zs_0 = np.array([0] * N) * 1e-6
 
 pos = np.append(np.append(xs_0, ys_0), zs_0)
 
+params = [wx, wy, wz, N, m, Q, epsilon_0]
+# pot_en = potential_energy(pos, *params)
 pot_en = potential_energy(pos)
 print('Potential Energy', pot_en)
 
@@ -138,17 +141,12 @@ plt.show()
 
 # %% Minimize potential energy to determine ion crystal positions
 
-res = minimize(potential_energy, pos, method='Nelder-Mead', tol=1e-10)
+# run bad guess through optimization with on a few iterations
+pos_better = minimize(potential_energy, pos, method='COBYLA', options={'tol':1e-30, 'maxiter':500})
 
-# Educated guess. 2nd minimization
-# pos = res.x
-# res = minimize(potential_energy, pos, method='Nelder-Mead', tol=1e-10)
-# res.x
+# Get fine results with better initial best and many iterations
+res = minimize(potential_energy, pos_better.x, method='COBYLA', options={'tol':1e-30, 'maxiter':80000})
 
-# # Educated guess. 3rd minimization
-# pos = res.x
-# res = minimize(potential_energy, pos, method='Nelder-Mead', tol=1e-15)
-# res.x
 
 # %% Plot radial plane
 xs_f = res.x[:N]
@@ -159,7 +157,11 @@ plt.plot(xs_f * 1e6, ys_f * 1e6, '.', markersize=16, color='royalblue', markered
 plt.title('Ion equilibrium position')
 plt.xlabel('x distance (micron)')
 plt.ylabel('y distance (micron)')
-plt.ylim(-20, 20)
-plt.xlim(-20, 20)
+plt.ylim(-40, 40)
+plt.xlim(-40, 40)
 plt.grid()
 plt.show()
+
+# %% Transerver mode (drum head) calculation
+
+
