@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.integrate import odeint
-from scipy.optimize import minimize
+from scipy.optimize import minimize, curve_fit
 
 from numba import jit
 import time
@@ -95,7 +95,7 @@ N = 7
 
 # harmonic frequencies
 wx = 2 * np.pi * 0.35e6
-wy = wx*1.01
+wy = wx*1
 wz = 2 * np.pi * 0.895e6
 print('alpha', wz/wx)
 e=Q
@@ -157,11 +157,28 @@ plt.plot(xs_f * 1e6, ys_f * 1e6, '.', markersize=16, color='royalblue', markered
 plt.title('Ion equilibrium position')
 plt.xlabel('x distance (micron)')
 plt.ylabel('y distance (micron)')
-plt.ylim(-40, 40)
-plt.xlim(-40, 40)
+plt.ylim(-30, 30)
+plt.xlim(-30, 30)
 plt.grid()
+plt.gca().set_aspect('equal')
 plt.show()
 
-# %% Transerver mode (drum head) calculation
+# %% Rotate crystal
 
+# angle is in degrees
+def rotate_crystal(xs, ys, angle):
+    xs_new = np.cos(angle/180*np.pi) * xs - np.sin(angle/180*np.pi) * ys
+    ys_new = np.cos(angle/180*np.pi) * ys + np.sin(angle/180*np.pi) * xs
+    return xs_new, ys_new
 
+xs_f, ys_f = rotate_crystal(xs_f, ys_f, 2)
+
+plt.figure(figsize=(6,6))
+plt.scatter(xs_f*1e6, ys_f*1e6, marker='o',s = 100)
+plt.title('Ion equilibrium position')
+plt.xlabel('x position in micron')
+plt.ylabel('y position in micron')
+plt.ylim(-30,30)
+plt.xlim(-30,30)
+plt.grid()
+plt.show()
