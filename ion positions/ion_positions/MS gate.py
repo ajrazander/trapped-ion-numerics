@@ -27,7 +27,7 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
 epsilon_0 = 8.8541878128e-12
 
 # number of ions
-N = 7
+N = 2
 
 # harmonic frequencies
 wx = 2 * np.pi * 0.35e6
@@ -107,7 +107,7 @@ def rotate_crystal(xs, ys, angle):
     ys_new = np.cos(angle/180*np.pi) * ys + np.sin(angle/180*np.pi) * xs
     return xs_new, ys_new
 
-xs_f, ys_f = rotate_crystal(xs_f, ys_f, -2)
+xs_f, ys_f = rotate_crystal(xs_f, ys_f, -4)
 
 plt.figure(figsize=(6,6))
 plt.scatter(xs_f*1e6, ys_f*1e6, marker='o',s = 100)
@@ -234,4 +234,70 @@ plt.ylabel('J_ij (kHz)')
 plt.grid()
 plt.show()
 
+# %%  Calculate U(t) for N ions (U(t) = exp[sum of J_ij sig_x^i sig_x^j])
+
+from scipy.linalg import expm
+
+sigma_x = np.array([[0,1],[1,0]])
+iden = np.eye(2,2)
+
+# compute sigma_x for each of N ions. will generate N 2^Nx2^N matrices, so make sure N is small
+sigma_xs = []
+for i in range(N):
+    if i==0:
+        kron_matrix = np.kron(iden, sigma_x)
+    elif i==1:
+        kron_matrix = np.kron(sigma_x, iden)
+    else:
+        kron_matrix = np.kron(iden, iden)
+    for j in range(2, N):
+        if i==j:
+            kron_matrix = np.kron(sigma_x, kron_matrix)
+        else:
+            kron_matrix = np.kron(iden, kron_matrix)
+    sigma_xs.append(kron_matrix)
+
+# compute Hamiltonian
+H_eff = np.zeros((2**N, 2**N))
+for i in range(N):
+    for j in range(i+1, N):
+        H_eff += j_ijs[i,j] * (sigma_xs[i] @ sigma_xs[j])
+
+# compute exponentiated operators
+ts = np.linspace(0, 500, 200)*1e-6
+# state1 = np.array(np.append([1], [0]*(2**(N)-1)))
+state1 = np.array([1,0,0,0])
+state2 = np.array([0,1,0,0])
+state3 = np.array([0,0,1,0])
+state4 = np.array([0,0,0,1])
+# state4 = np.array(np.append([0]*(2**(N)-1), [1]))
+probs = []
+vecs = []
+for t in ts:
+    U_t = expm(-1j * H_eff * t)
+    vecs.append(U_t @ state1)
+    probs.append(np.abs(np.transpose(state1) @ U_t @ state1))
+
+plt.plot(ts*1e6, probs)
+plt.xlabel(r'time ($\mu$s)')
+plt.ylabel('probability')
+plt.grid()
+plt.show()
+
+plt.plot(ts*1e6, np.abs(vecs))
+plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
+plt.plot(ts*1e6, np.sin(j_ijs[0,1]*ts)**2)
+plt.xlabel(r'time ($\mu$s)')
+plt.ylabel('probability')
+plt.grid()
+plt.show()
+
+
+# %% Phase-space trajectories for MS gate
+
+
+
+
 # %% Pulse shaping for MS gate
+
+
