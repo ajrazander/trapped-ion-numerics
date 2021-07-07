@@ -13,7 +13,7 @@ import time
 # %% Constants for Yb171+
 
 m = 170.936323 * 1.66054e-27  # ion mass
-Q = 1.60217662e-19  # electron charge
+e = 1.60217662e-19  # electron charge
 
 # Trap parameters
 r0 = 250e-6 * np.sqrt(2)  # distance to rf electrodes
@@ -29,7 +29,7 @@ vz_i = 0  # initial ion speed
 
 U0 = 24.0
 
-omega_z = np.sqrt((2*Q*kappa*U0) / (m*z0**2))
+omega_z = np.sqrt((2*e*kappa*U0) / (m*z0**2))
 print('axial harmonic frequency', omega_z/2/np.pi)
 
 # U is a vector such that z=U[0] and y=U[1]; returns [z', y']
@@ -62,8 +62,8 @@ vx_i = 0  # initial ion speed
 
 V0 = 340.0
 
-a = (4*Q*kappa*U0) / (m*z0**2*Omega_t**2)
-qx = (2*Q*V0) / (Omega_t**2*m*r0**2)
+a = (4*e*kappa*U0) / (m*z0**2*Omega_t**2)
+qx = (2*e*V0) / (Omega_t**2*m*r0**2)
 
 def dU_dt(U, chi):
     return [U[1], (2*qx*np.cos(2 * chi) - a)*U[0]]
@@ -73,7 +73,7 @@ chis = Omega_t * ts / 2
 Us = odeint(dU_dt, U_i, chis)
 xs = Us[:,0]
 
-omega_x = np.sqrt(Q/m * (qx*V0/4/r0**2 - kappa*U0/z0**2))
+omega_x = np.sqrt(e/m * (qx*V0/4/r0**2 - kappa*U0/z0**2))
 
 print('expected secular frequency (MHz)', omega_x/2/np.pi*1e-6)
 
@@ -98,7 +98,7 @@ wx = 2 * np.pi * 0.35e6
 wy = wx*1
 wz = 2 * np.pi * 0.895e6
 print('alpha', wz/wx)
-e=Q
+
 @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
     # wx, wy, wz, N, m, e, epsilon_0 = params
@@ -127,7 +127,7 @@ zs_0 = np.array([0] * N) * 1e-6
 
 pos = np.append(np.append(xs_0, ys_0), zs_0)
 
-params = [wx, wy, wz, N, m, Q, epsilon_0]
+params = [wx, wy, wz, N, m, e, epsilon_0]
 # pot_en = potential_energy(pos, *params)
 pot_en = potential_energy(pos)
 print('Potential Energy', pot_en)
