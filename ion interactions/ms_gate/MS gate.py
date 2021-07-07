@@ -11,9 +11,9 @@ from numba import jit
 import time
 
 # %% Constants for Yb171+
-
 m = 170.936323 * 1.66054e-27  # ion mass
-Q = 1.60217662e-19  # electron charge
+e = 1.60217662e-19  # electron charge
+epsilon_0 = 8.8541878128e-12
 
 # Trap parameters
 r0 = 250e-6 * np.sqrt(2)  # distance to rf electrodes
@@ -23,9 +23,6 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
 
 # %% Ion crystal positions
 
-# constants
-epsilon_0 = 8.8541878128e-12
-
 # number of ions
 N = 2
 
@@ -34,7 +31,7 @@ wx = 2 * np.pi * 0.35e6
 wy = wx*1
 wz = 2 * np.pi * 0.895e6
 print('alpha', wz/wx)
-e=Q
+
 @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
     # wx, wy, wz, N, m, e, epsilon_0 = params
@@ -188,14 +185,14 @@ interaction_rates = j_ijs[i,:]
 
 plt.figure(figsize=(6,6))
 plt.scatter(xs_f*1e6, ys_f*1e6, c=interaction_rates/1e3, cmap='jet', marker='o',s = 150)
-plt.title('Ion equilibrium position')
-plt.xlabel('x position in micron')
-plt.ylabel('y position in micron')
+plt.title('Ion equilibrium positions')
+plt.xlabel(r'x position ($\mu$m)')
+plt.ylabel(r'y position ($\mu$m)')
 plt.ylim(-30,30)
 plt.xlim(-30,30)
-plt.text(xs_f[i]*1e6 - 2, ys_f[i]*1e6 + 2, 'i ion')
+plt.text(xs_f[i]*1e6 - 2, ys_f[i]*1e6 + 2, 'ith ion')
 plt.grid()
-plt.colorbar()
+plt.colorbar(label=r'$J_{ij}$ (kHz) from the ith ion')
 plt.show()
 
 
@@ -264,7 +261,7 @@ for i in range(N):
         H_eff += j_ijs[i,j] * (sigma_xs[i] @ sigma_xs[j])
 
 # compute exponentiated operators
-ts = np.linspace(0, 500, 200)*1e-6
+ts = np.linspace(0, 150, 200)*1e-6
 # state1 = np.array(np.append([1], [0]*(2**(N)-1)))
 state1 = np.array([1,0,0,0])
 state2 = np.array([0,1,0,0])
@@ -273,20 +270,21 @@ state4 = np.array([0,0,0,1])
 # state4 = np.array(np.append([0]*(2**(N)-1), [1]))
 probs = []
 vecs = []
+state = state1
 for t in ts:
-    U_t = expm(-1j * H_eff * t)
-    vecs.append(U_t @ state1)
-    probs.append(np.abs(np.transpose(state1) @ U_t @ state1))
+    U_t = expm(-1.0j * H_eff * t)
+    vecs.append((U_t @ state1))
+    probs.append(np.abs(np.transpose(state) @ U_t @ state)**2)
 
 plt.plot(ts*1e6, probs)
+plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
+plt.plot(ts*1e6, np.sin(j_ijs[0,1]*ts)**2)
 plt.xlabel(r'time ($\mu$s)')
 plt.ylabel('probability')
 plt.grid()
 plt.show()
 
-plt.plot(ts*1e6, np.abs(vecs))
-plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
-plt.plot(ts*1e6, np.sin(j_ijs[0,1]*ts)**2)
+plt.plot(ts*1e6, np.abs(vecs)**2)
 plt.xlabel(r'time ($\mu$s)')
 plt.ylabel('probability')
 plt.grid()
