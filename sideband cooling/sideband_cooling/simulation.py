@@ -75,7 +75,9 @@ class SidebandCooling():
 
 
     def cool(self, strategy, N_pulses, rsb_order):
-        if strategy == 'classic':
+        if N_pulses == 0:
+            return self.initial_nbar, [], [], self.current_dist
+        elif strategy == 'classic':
             self.cooled_nbar, self.pulse_schedule, self.cooling_time, self.cooled_dist = self.classic(N_pulses, rsb_order)
         elif strategy == 'fixed':
             self.cooled_nbar, self.pulse_schedule, self.cooling_time, self.cooled_dist = self.fixed(N_pulses, rsb_order)
