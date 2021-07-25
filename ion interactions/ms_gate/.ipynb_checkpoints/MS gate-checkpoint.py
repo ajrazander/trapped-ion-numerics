@@ -24,12 +24,13 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
 # %% Ion crystal positions
 
 # number of ions
-N = 4
+N = 2
 
 # harmonic frequencies
-wx = 2 * np.pi * 0.446e6
-wy = 2 * np.pi * 0.416e6
-wz = 2 * np.pi * 1.216e6
+wx = 2 * np.pi * 0.35e6
+wy = wx*1
+wz = 2 * np.pi * 0.895e6
+print('alpha', wz/wx)
 
 @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
@@ -59,7 +60,7 @@ zs_0 = np.array([0] * N) * 1e-6
 
 pos = np.append(np.append(xs_0, ys_0), zs_0)
 
-# params = [wx, wy, wz, N, m, e, epsilon_0]
+params = [wx, wy, wz, N, m, Q, epsilon_0]
 # pot_en = potential_energy(pos, *params)
 pot_en = potential_energy(pos)
 print('Potential Energy', pot_en)
@@ -149,7 +150,7 @@ z_vals, z_vecs = np.linalg.eig(normal_modes(xs_f, ys_f, *constants))
 z_freqs = np.round(np.sqrt(np.abs(z_vals))/2/np.pi)
 z_freqs, np.round(z_vecs, 3)
 
-adjusted_freqs = (z_freqs - np.max(z_freqs))/1e3
+adjusted_freqs = (z_freqs - np.min(z_freqs))/1e3
 plt.vlines(adjusted_freqs, [0]*N, [2]*N)
 plt.title('Mode frequency - COM frequency')
 plt.xlabel('kHz')
@@ -157,7 +158,7 @@ plt.show()
 
 # %% J_ij interaction rate calculations
 
-def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
+def compute_Jijs(eig_vecs, eig_modes, mu, wzs, *constants):
     omega, m, hbar, dk = constants
     prefactor = omega**2 * hbar * dk**2 / 2 / m
     num_modes = eig_vecs.shape[1]
@@ -166,12 +167,12 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
         for j in range(num_modes):
             mode_sum = 0
             if j != i:
-                mode_sum = np.sum(eig_vecs[i,:]*eig_vecs[j,:] / (mu**2 - eig_vals**2))
+                mode_sum = np.sum(eig_vecs[i,:]*eig_vecs[j,:] / (mu**2 - eig_modes**2))
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = 2*np.pi * 100e3 + np.max(z_freqs)*2*np.pi
-omega = 2*np.pi / (2*8.2e-6)
+mu = 2*np.pi * 0.350e6 + np.max(z_freqs)*2*np.pi
+omega = 2*np.pi * 1.5e6
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
 
