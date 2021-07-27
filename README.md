@@ -10,7 +10,9 @@ Examples of how to determine the optimal pulse times for a given number of SBC p
 Global optimization of all pulse times is computationally expensive for large numbers of pulses, so I've started integrating some machine learning models to extrapolate what those pulse times are for large numbers of pulses [2]. (Still under developedment in svr.py file).
 
 Please cite my work:
+
 \[1] [Rasmusson, A.J., et al. "Optimized sideband cooling and enhanced thermometry of trapped ions." arXiv:2107.11802 [quant-ph] (2021).](https://arxiv.org/abs/2107.11802)
+
 \[2] [Rasmusson, A.J., et al. "Machine learning estimation of optimal resolved sideband cooling strategies." Bulletin of the American Physical Society (2021).](https://meetings.aps.org/Meeting/DAMOP21/Session/Z05.3)
 
 
