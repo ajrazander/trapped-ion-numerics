@@ -64,7 +64,23 @@ with open('data/dataX_'+strategy+'_nbar.npy', 'rb') as f:
     dataX = np.load(f)
 with open('data/dataY_'+strategy+'_nbar.npy', 'rb') as f:
     dataY = np.load(f)
+
+# Group pulse times into batches of 10 with the "label" of batch being the pulse just after the batch
+batch_size = 10
+pulse_times = dataX[:,1]
+features = []
+labels = []
+for i in range(batch_size, len(pulse_times)):
+    features.append(pulse_times[i - batch_size: i])
+    labels.append(pulse_times[i])
     
+features = np.array(features)
+labels = np.array(labels)
+
+# %%
+
+dataX_batched
+
 # Preprocess data
 X_train, X_test, y_train, y_test = train_test_split(dataX, dataY, test_size=0.33, random_state=42)
 
