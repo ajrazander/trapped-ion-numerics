@@ -6,8 +6,12 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Masking, Embedding
+
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -65,7 +69,7 @@ with open('data/dataX_'+strategy+'_nbar.npy', 'rb') as f:
 with open('data/dataY_'+strategy+'_nbar.npy', 'rb') as f:
     dataY = np.load(f)
 
-# Group pulse times into batches of 10 with the "label" of batch being the pulse just after the batch
+# %% Group pulse times into batches of 10 with the "label" of batch being the pulse just after the batch
 batch_size = 10
 pulse_times = dataX[:,1]
 features = []
@@ -74,15 +78,21 @@ for i in range(batch_size, len(pulse_times)):
     features.append(pulse_times[i - batch_size: i])
     labels.append(pulse_times[i])
     
-features = np.array(features)
-labels = np.array(labels)
+ptimesX = np.array(features)
+ptimesY = np.array(labels)
+
+ind = 10
+plt.plot(np.arange(batch_size), ptimesX[ind], label='features')
+plt.scatter(batch_size, ptimesY[ind], label='label')
+plt.grid()
+plt.legend()
+plt.show()
 
 # %%
 
-dataX_batched
 
 # Preprocess data
-X_train, X_test, y_train, y_test = train_test_split(dataX, dataY, test_size=0.33, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(ptimesX, ptimesY, test_size=0.33, random_state=42)
 
 scalerX = preprocessing.StandardScaler().fit(X_train)
 scalery = preprocessing.StandardScaler().fit(y_train.reshape(-1,1))
@@ -91,3 +101,51 @@ y_train = (scalery.transform(y_train.reshape(-1,1))).reshape(-1,)
 X_test = scalerX.transform(X_test)
 y_test = (scalery.transform(y_test.reshape(-1,1))).reshape(-1,)
 
+# %%
+
+model = Sequential()
+
+# Embedding layer
+model.add(
+    Embedding(input_dim=1000,
+              input_length=10,
+              output_dim=100,
+              trainable=False,
+              mask_zero=True))
+
+# Masking layer for pre-trained embeddings
+model.add(Masking(mask_value=0.0))
+
+# Recurrent layer
+model.add(LSTM(64, return_sequences=False, 
+               dropout=0.1, recurrent_dropout=0.1))
+
+# Fully connected layer
+model.add(Dense(64, activation='relu'))
+
+# Dropout for regularization
+model.add(Dropout(0.5))
+
+# Output layer
+model.add(Dense(10, activation='softmax'))
+
+# Compile the model
+model.compile(
+    optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+model.summary()
+# %%
+
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+# Create callbacks
+callbacks = [EarlyStopping(monitor='val_loss', patience=5), 
+             ModelCheckpoint('../models/model.h5', save_best_only=True, save_weights_only=False)]
+
+# %%
+
+history = model.fit(X_train,  y_train, 
+                    batch_size=10, epochs=150,
+                    callbacks=callbacks,
+                    verbose=0,
+                    validation_data=(X_test, y_test))
