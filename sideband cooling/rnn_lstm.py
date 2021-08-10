@@ -88,18 +88,20 @@ plt.grid()
 plt.legend()
 plt.show()
 
-# %%
+# %% Preprocess data
+# convert units to  micro sectons
+ptimesX *= 1e6
+ptimesY *= 1e6
 
-
-# Preprocess data
 X_train, X_test, y_train, y_test = train_test_split(ptimesX, ptimesY, test_size=0.33, random_state=42)
 
-scalerX = preprocessing.StandardScaler().fit(X_train)
-scalery = preprocessing.StandardScaler().fit(y_train.reshape(-1,1))
-X_train = scalerX.transform(X_train)
-y_train = (scalery.transform(y_train.reshape(-1,1))).reshape(-1,)
-X_test = scalerX.transform(X_test)
-y_test = (scalery.transform(y_test.reshape(-1,1))).reshape(-1,)
+
+# scalerX = preprocessing.StandardScaler().fit(X_train)
+# scalery = preprocessing.StandardScaler().fit(y_train.reshape(-1,1))
+# X_train = scalerX.transform(X_train)
+# y_train = (scalery.transform(y_train.reshape(-1,1))).reshape(-1,)
+# X_test = scalerX.transform(X_test)
+# y_test = (scalery.transform(y_test.reshape(-1,1))).reshape(-1,)
 
 # %%
 
@@ -107,27 +109,21 @@ model = Sequential()
 
 # Embedding layer
 model.add(
-    Embedding(input_dim=1000,
-              input_length=10,
-              output_dim=100,
-              trainable=False,
-              mask_zero=True))
-
-# Masking layer for pre-trained embeddings
-model.add(Masking(mask_value=0.0))
+    Embedding(input_dim=100,
+              output_dim=32))
 
 # Recurrent layer
-model.add(LSTM(64, return_sequences=False, 
+model.add(LSTM(32, return_sequences=False, 
                dropout=0.1, recurrent_dropout=0.1))
 
 # Fully connected layer
-model.add(Dense(64, activation='relu'))
+model.add(Dense(32, activation='relu'))
 
 # Dropout for regularization
 model.add(Dropout(0.5))
 
 # Output layer
-model.add(Dense(10, activation='softmax'))
+model.add(Dense(1, activation='softmax'))
 
 # Compile the model
 model.compile(
@@ -145,7 +141,10 @@ callbacks = [EarlyStopping(monitor='val_loss', patience=5),
 # %%
 
 history = model.fit(X_train,  y_train, 
-                    batch_size=10, epochs=150,
+                    batch_size=10, epochs=50,
                     callbacks=callbacks,
-                    verbose=0,
+                    verbose=1,
                     validation_data=(X_test, y_test))
+
+# %%
+
