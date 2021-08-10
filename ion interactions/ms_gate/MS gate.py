@@ -27,9 +27,9 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
 N = 4
 
 # harmonic frequencies
-wx = 2 * np.pi * 0.446e6
-wy = 2 * np.pi * 0.416e6
-wz = 2 * np.pi * 1.216e6
+wx = 2 * np.pi * 0.4e6
+wy = 2 * np.pi * 0.4e6
+wz = 2 * np.pi * 1.2e6
 
 @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
@@ -75,6 +75,9 @@ plt.show()
 
 # run bad guess through optimization with on a few iterations
 pos_better = minimize(potential_energy, pos, method='COBYLA', options={'tol':1e-30, 'maxiter':500})
+
+# Get fine results with better initial best and many iterations
+pos_better = minimize(potential_energy, pos_better.x, method='COBYLA', options={'tol':1e-30, 'maxiter':80000})
 
 # Get fine results with better initial best and many iterations
 res = minimize(potential_energy, pos_better.x, method='COBYLA', options={'tol':1e-30, 'maxiter':80000})
