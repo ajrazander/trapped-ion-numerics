@@ -234,8 +234,9 @@ plt.grid()
 plt.show()
 
 # %%  Calculate U(t) for N ions (U(t) = exp[sum of J_ij sig_x^i sig_x^j])
-
 from scipy.linalg import expm
+
+N = 2
 
 sigma_x = np.array([[0,1],[1,0]])
 iden = np.eye(2,2)
@@ -264,12 +265,12 @@ for i in range(N):
 
 # compute exponentiated operators
 ts = np.linspace(0, 150, 200)*1e-6
-# state1 = np.array(np.append([1], [0]*(2**(N)-1)))
-state1 = np.array([1,0,0,0])
-state2 = np.array([0,1,0,0])
-state3 = np.array([0,0,1,0])
-state4 = np.array([0,0,0,1])
-# state4 = np.array(np.append([0]*(2**(N)-1), [1]))
+state1 = np.array(np.append([1], [0]*(2**(N)-1)))
+# state1 = np.array([1,0,0,0])
+# state2 = np.array([0,1,0,0])
+# state3 = np.array([0,0,1,0])
+# state4 = np.array([0,0,0,1])
+state4 = np.array(np.append([0]*(2**(N)-1), [1]))
 probs = []
 vecs = []
 state = state1

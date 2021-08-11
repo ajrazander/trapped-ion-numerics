@@ -12,6 +12,7 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Masking, Embedding
 
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -60,7 +61,7 @@ with open('data/dataX_'+strategy+'_nbar.npy', 'wb') as f:
 with open('data/dataY_'+strategy+'_nbar.npy', 'wb') as f:
     np.save(f, dataY)
 
-# %% Load and preprocess data
+# %% Load data
 
 strategy = 'optimal'
 # load data
@@ -69,14 +70,22 @@ with open('data/dataX_'+strategy+'_nbar.npy', 'rb') as f:
 with open('data/dataY_'+strategy+'_nbar.npy', 'rb') as f:
     dataY = np.load(f)
 
-# %% Group pulse times into batches of 10 with the "label" of batch being the pulse just after the batch
-batch_size = 10
-pulse_times = dataX[:,1]
+# %% Preprocess data
+
+# Only need pulse times from simulated data
+ptimes = dataX[:,1]
+
+scaler = preprocessing.MinMaxScaler(feature_range=(0,1))
+ptimes_scaled = scaler.fit_transform(ptimes.reshape(-1,1))
+
+# %% Group pulse times into groups with the "label" of group being the pulse just after the group
+batch_size = 5
+
 features = []
 labels = []
-for i in range(batch_size, len(pulse_times)):
-    features.append(pulse_times[i - batch_size: i])
-    labels.append(pulse_times[i])
+for i in range(batch_size, len(ptimes_scaled)):
+    features.append(ptimes_scaled[i - batch_size: i])
+    labels.append(ptimes_scaled[i])
     
 ptimesX = np.array(features)
 ptimesY = np.array(labels)
@@ -88,63 +97,64 @@ plt.grid()
 plt.legend()
 plt.show()
 
-# %% Preprocess data
-# convert units to  micro sectons
-ptimesX *= 1e6
-ptimesY *= 1e6
+# %% Split into test and train
 
 X_train, X_test, y_train, y_test = train_test_split(ptimesX, ptimesY, test_size=0.33, random_state=42)
+X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
+X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
+# y_train = np.reshape(y_train, (y_train.shape[0], y_train.shape[1]))
 
+# X_train = tf.reshape(X_train, (1, X_train.shape[1]))
+# y_train = tf.reshape(y_train, (1, y_train.shape[1]))
 
-# scalerX = preprocessing.StandardScaler().fit(X_train)
-# scalery = preprocessing.StandardScaler().fit(y_train.reshape(-1,1))
-# X_train = scalerX.transform(X_train)
-# y_train = (scalery.transform(y_train.reshape(-1,1))).reshape(-1,)
-# X_test = scalerX.transform(X_test)
-# y_test = (scalery.transform(y_test.reshape(-1,1))).reshape(-1,)
 
 # %%
 
 model = Sequential()
 
-# Embedding layer
-model.add(
-    Embedding(input_dim=100,
-              output_dim=32))
-
 # Recurrent layer
-model.add(LSTM(32, return_sequences=False, 
-               dropout=0.1, recurrent_dropout=0.1))
+model.add(LSTM(10, input_shape=(1, batch_size)))
 
 # Fully connected layer
-model.add(Dense(32, activation='relu'))
-
+# model.add(Dense(10, activation='relu'))
+# 
 # Dropout for regularization
 model.add(Dropout(0.5))
 
 # Output layer
-model.add(Dense(1, activation='softmax'))
+model.add(Dense(1))
 
 # Compile the model
-model.compile(
-    optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
 model.summary()
+
 # %%
-
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-
-# Create callbacks
-callbacks = [EarlyStopping(monitor='val_loss', patience=5), 
-             ModelCheckpoint('../models/model.h5', save_best_only=True, save_weights_only=False)]
+model.fit(X_train,  y_train, batch_size=1, epochs=100, verbose=2)
 
 # %%
 
-history = model.fit(X_train,  y_train, 
-                    batch_size=10, epochs=50,
-                    callbacks=callbacks,
-                    verbose=1,
-                    validation_data=(X_test, y_test))
+train_pred = model.predict(X_train)
+test_pred = model.predict(X_test)
 
-# %%
+# "unscale" predictions
+train_pred = scaler.inverse_transform(train_pred)
+test_pred = scaler.inverse_transform(test_pred)
+y_train = scaler.inverse_transform(y_train)
+y_test = scaler.inverse_transform(y_test)
 
+print('Train score', np.sqrt(mean_squared_error(y_train, train_pred)))
+print('Test score', np.sqrt(mean_squared_error(y_test, test_pred)))
+
+
+# %% Plot predictions
+	
+ind = 0
+
+plt.plot(np.arange(batch_size), ptimesX[ind])
+plt.scatter(batch_size, ptimesY[ind], color='b')
+
+pred = model.predict(np.reshape(ptimesX[ind], (1,1,batch_size)))
+plt.scatter(batch_size, pred, color='r')
+plt.grid()
+plt.show()
