@@ -173,7 +173,7 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = 2*np.pi * 50e3 + np.max(z_freqs)*2*np.pi
+mu = 2*np.pi * 100e3 + np.max(z_freqs)*2*np.pi
 omega = 2*np.pi / (2*8.2e-6)
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
