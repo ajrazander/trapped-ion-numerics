@@ -173,7 +173,7 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = 2*np.pi * 100e3 + np.max(z_freqs)*2*np.pi
+mu = 2*np.pi * 50e3 + np.max(z_freqs)*2*np.pi
 omega = 2*np.pi / (2*8.2e-6)
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
@@ -236,65 +236,80 @@ plt.show()
 # %%  Calculate U(t) for N ions (U(t) = exp[sum of J_ij sig_x^i sig_x^j])
 from scipy.linalg import expm
 
-N = 2
+# N must be > 2
+N = 4
 
 sigma_x = np.array([[0,1],[1,0]])
 iden = np.eye(2,2)
 
-# compute sigma_x for each of N ions. will generate N 2^Nx2^N matrices, so make sure N is small
-sigma_xs = []
-for i in range(N):
-    if i==0:
-        kron_matrix = np.kron(iden, sigma_x)
-    elif i==1:
-        kron_matrix = np.kron(sigma_x, iden)
+# compute sigma_x (tensor) sigma_x pair-wise interactions for all ion pairs
+def sigma_x_ij(i,j):
+    if i == 0 or j == 0:    
+        sigma_x_ij = sigma_x
     else:
-        kron_matrix = np.kron(iden, iden)
-    for j in range(2, N):
-        if i==j:
-            kron_matrix = np.kron(sigma_x, kron_matrix)
+        sigma_x_ij = iden
+    for k in range(1, N):
+        if k == i:
+            sigma_x_ij = np.kron(sigma_x, sigma_x_ij)
+        elif k == j:
+            sigma_x_ij = np.kron(sigma_x, sigma_x_ij)
         else:
-            kron_matrix = np.kron(iden, kron_matrix)
-    sigma_xs.append(kron_matrix)
-
+            sigma_x_ij = np.kron(iden, sigma_x_ij)
+    return sigma_x_ij
+            
+        
 # compute Hamiltonian
 H_eff = np.zeros((2**N, 2**N))
 for i in range(N):
     for j in range(i+1, N):
-        H_eff += j_ijs[i,j] * (sigma_xs[i] @ sigma_xs[j])
+        H_eff += j_ijs[i,j] * sigma_x_ij(i,j)
+
+plt.imshow(H_eff, cmap='jet')
+plt.colorbar()
+plt.show()
 
 # compute exponentiated operators
-ts = np.linspace(0, 150, 200)*1e-6
-state1 = np.array(np.append([1], [0]*(2**(N)-1)))
-# state1 = np.array([1,0,0,0])
-# state2 = np.array([0,1,0,0])
-# state3 = np.array([0,0,1,0])
-# state4 = np.array([0,0,0,1])
-state4 = np.array(np.append([0]*(2**(N)-1), [1]))
+ts = np.linspace(0, 30000, 1000)*1e-6
+state1 = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 probs = []
 vecs = []
 state = state1
-for t in ts:
-    U_t = expm(-1.0j * H_eff * t)
-    vecs.append((U_t @ state1))
-    probs.append(np.abs(np.transpose(state) @ U_t @ state)**2)
 
-plt.plot(ts*1e6, probs)
-plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
-plt.plot(ts*1e6, np.sin(j_ijs[0,1]*ts)**2)
-plt.xlabel(r'time ($\mu$s)')
-plt.ylabel('probability')
+probs = [np.abs(np.transpose(state) @ expm(-1.0j * t * H_eff) @ state)**2 for t in ts]
+plt.plot(ts*1e3, probs)
+plt.xlabel('time (ms)')
+plt.ylabel('prob 0000')
 plt.grid()
 plt.show()
 
-plt.plot(ts*1e6, np.abs(vecs)**2)
-plt.xlabel(r'time ($\mu$s)')
+probs_full = [np.abs(expm(-1.0j * t * H_eff) @ state)**2 for t in ts]
+probs_full = np.array(probs_full)
+state_labels = ['0000','0001','0010','0011','0100','0101','0110','0111','1000','1001','1010','1011','1100','1101','1110','1111']
+
+
+plt.plot(ts*1e3, probs_full[:,0:16])
+plt.xlabel('time (ms)')
 plt.ylabel('probability')
+plt.legend(state_labels)
 plt.grid()
 plt.show()
 
+# plt.plot(ts*1e6, probs)
+# plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
+# plt.plot(ts*1e6, np.sin(j_ijs[0,1]*ts)**2)
+# plt.xlabel(r'time ($\mu$s)')
+# plt.ylabel('probability')
+# plt.grid()
+# plt.show()
 
-# %% Phase-space trajectories for MS gate
+# plt.plot(ts*1e6, np.abs(vecs)**2)
+# plt.xlabel(r'time ($\mu$s)')
+# plt.ylabel('probability')
+# plt.grid()
+# plt.show()
+
+
+ # %% Phase-space trajectories for MS gate
 
 
 
