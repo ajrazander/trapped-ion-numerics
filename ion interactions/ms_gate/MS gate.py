@@ -31,7 +31,7 @@ wx = 2 * np.pi * 0.4e6
 wy = 2 * np.pi * 0.4e6
 wz = 2 * np.pi * 1.2e6
 
-@jit(nopython=True, fastmath=True)
+# @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
     # wx, wy, wz, N, m, e, epsilon_0 = params
     xs = positions[:N]
@@ -173,7 +173,7 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = 2*np.pi * 100e3 + np.max(z_freqs)*2*np.pi
+mu = -2*np.pi * 1e3 + np.max(z_freqs)*2*np.pi
 omega = 2*np.pi / (2*8.2e-6)
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
@@ -264,9 +264,33 @@ for i in range(N):
     for j in range(i+1, N):
         H_eff += j_ijs[i,j] * sigma_x_ij(i,j)
 
+# Display Hamiltonian matrix
 plt.imshow(H_eff, cmap='jet')
 plt.colorbar()
 plt.show()
+
+
+# Plot energy spectrum
+e_vals, e_vecs = np.linalg.eig(H_eff)
+e_vals = np.round(np.real(e_vals), 5)
+e_vecs = np.round(e_vecs, 5)
+
+normed_evals = (e_vals - np.min(e_vals)) / (np.max(e_vals) - np.min(e_vals))
+
+plt.hlines(normed_evals,0,1)
+plt.ylabel('Normalized Energy spectrum')
+plt.title('Effective Hamiltonian Spectrum')
+plt.grid()
+plt.show()
+
+# Ferromagnetic ground state
+# 0001, 0010, 0100, 0111, 1000, 1011, 1101, 1110
+
+# Antiferromagnetic ground state
+# 0000, 0011, 0101, 0110, 1001, 1010, 1100, 1111
+# 0001, 0010, 0100, 1000, 1001, 1011, 1100, 1101, 1110
+
+# %% Evolve H_eff over time
 
 # compute exponentiated operators
 ts = np.linspace(0, 30000, 1000)*1e-6
@@ -286,13 +310,15 @@ probs_full = [np.abs(expm(-1.0j * t * H_eff) @ state)**2 for t in ts]
 probs_full = np.array(probs_full)
 state_labels = ['0000','0001','0010','0011','0100','0101','0110','0111','1000','1001','1010','1011','1100','1101','1110','1111']
 
-
+# display all states evolving over time
 plt.plot(ts*1e3, probs_full[:,0:16])
 plt.xlabel('time (ms)')
 plt.ylabel('probability')
 plt.legend(state_labels)
 plt.grid()
 plt.show()
+
+
 
 # plt.plot(ts*1e6, probs)
 # plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
