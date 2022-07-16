@@ -29,12 +29,12 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
 # %% Ion crystal positions
 
 # Number of ions
-N = 4
+N = 2
 
 # Harmonic frequencies
-wx = 2 * np.pi * 0.4e6
-wy = 2 * np.pi * 0.4e6
-wz = 2 * np.pi * 1.03e6
+wx = 2 * np.pi * 1.0e6
+wy = 2 * np.pi * 1.0e6
+wz = 2 * np.pi * 1.23e6
 
 # @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
@@ -131,7 +131,7 @@ plt.show()
 
 def normal_modes(xs, ys, wz, *constants):
     e, epsilon_0, m = constants
-    scale = e**2/4/np.pi/epsilon_0 / m
+    scale = e**2/4/np.pi/epsilon_0 / m * 2
     
     # Add harmonic terms to matrix
     matrix = wz**2 * np.diag(np.ones(N))
