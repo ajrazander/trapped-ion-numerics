@@ -123,37 +123,40 @@ plt.gca().set_aspect('equal')
 plt.show()
 
 # %% Transverse ("drumhead") mode calculation
+# From Phil Richerme's paper:
+# Physical Review A 94, 032320 (2016)
+# "Two-dimensional ion crystals in radio-frequency traps for quantum simulation"
 
-def normal_modes(xs, ys, *constants):
+def normal_modes(xs, ys, wz, *constants):
     e, epsilon_0, m = constants
-    scale = e**2/4/np.pi/epsilon_0/m
+    scale = e**2/4/np.pi/epsilon_0 / m * 2
     
     # Add harmonic terms to matrix
-    matrix = -wz**2 * np.diag(np.ones(N))
+    matrix = wz**2 * np.diag(np.ones(N))
 
-    # Add interaction diagonal terms
+    # Add Coulomb interaction (diagonal terms)
     for i in range(N):
-        diag = 0
+        diag_element = 0
         for j in range(N):
             if i != j:
-                diag += scale / np.sqrt((xs[i]-xs[j])**2+(ys[i]-ys[j])**2)**3
-        matrix[i,i] += diag
+                diag_element += scale / ((xs[i]-xs[j])**2 + (ys[i]-ys[j])**2)**(3/2)
+        matrix[i,i] -= diag_element
 
-    # Add interaction cross terms 
+    # Add Coulomb interaction (cross terms)
     for i in range(N):
         for j in range(N):
             cross_term = 0
             if i != j:
-                cross_term = scale / np.sqrt((xs[i]-xs[j])**2+(ys[i]-ys[j])**2)**3
-            matrix[i,j] -= cross_term
-            
+                cross_term = scale / ((xs[i]-xs[j])**2+(ys[i]-ys[j])**2)**(3/2)
+            matrix[i,j] += cross_term
     e_vals, e_vecs = np.linalg.eig(matrix)
     return e_vals, e_vecs
 
+# constants = (e, epsilon_0, m)
+# matrix = normal_modes(xs_f, ys_f, wz, *constants)
 
-# Compute normal modes and frequencies
 constants = (e, epsilon_0, m)
-z_vals, z_vecs = normal_modes(xs_f, ys_f, *constants)
+z_vals, z_vecs = normal_modes(xs_f, ys_f, wz, *constants)
 
 z_freqs = np.round(np.sqrt(np.abs(z_vals))/2/np.pi)
 z_freqs, np.round(z_vecs, 3)
@@ -168,6 +171,7 @@ plt.xlabel('MHz')
 plt.show()
 
 print('mode frequencies (MHz)', z_freqs)
+
 
 # %% J_ij interaction rate calculations
 
