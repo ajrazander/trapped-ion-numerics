@@ -131,7 +131,7 @@ plt.show()
 
 def normal_modes(xs, ys, wz, *constants):
     e, epsilon_0, m = constants
-    scale = e**2/4/np.pi/epsilon_0 / m * 2
+    scale = e**2/4/np.pi/epsilon_0 / m
     
     # Add harmonic terms to matrix
     matrix = wz**2 * np.diag(np.ones(N))
