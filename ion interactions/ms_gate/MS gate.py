@@ -5,7 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.integrate import odeint
-from scipy.optimize import minimize, curve_fit
+from scipy.optimize import minimize, curve_fit, fmin_ncg
+
+from qiskit.opflow import Zero
 
 from numba import jit
 import time
@@ -21,6 +23,7 @@ z0 = 670e-6  # distance to dc electrodes
 kappa = 0.35  # geometric factor
 Omega_t = 2*np.pi * 21e6  # rf frequency
 
+ 
 # %% Ion crystal positions
 
 # number of ions
@@ -29,7 +32,7 @@ N = 4
 # harmonic frequencies
 wx = 2 * np.pi * 0.4e6
 wy = 2 * np.pi * 0.4e6
-wz = 2 * np.pi * 1.2e6
+wz = 2 * np.pi * 1.03e6
 
 # @jit(nopython=True, fastmath=True)
 def potential_energy(positions):
@@ -54,7 +57,8 @@ def potential_energy(positions):
 # xs_0 = np.random.choice(range(-N,N), N) * 1e-6
 xs_0 = np.arange(0, N) * 1e-6
 # ys_0 = np.random.choice(range(-N,N), N) * 1e-6
-ys_0 = np.array([0] * N) * 1e-6
+ys_0 = np.arange(0, N) * 1e-6
+# ys_0 = np.array([0]*(N//2) + [1]*(N//2))
 zs_0 = np.array([0] * N) * 1e-6
 
 pos = np.append(np.append(xs_0, ys_0), zs_0)
@@ -76,7 +80,7 @@ plt.show()
 # run bad guess through optimization with on a few iterations
 pos_better = minimize(potential_energy, pos, method='COBYLA', options={'tol':1e-30, 'maxiter':500})
 
-# Get fine results with better initial best and many iterations
+# # Get fine results with better initial best and many iterations
 pos_better = minimize(potential_energy, pos_better.x, method='COBYLA', options={'tol':1e-30, 'maxiter':80000})
 
 # Get fine results with better initial best and many iterations
@@ -106,16 +110,16 @@ def rotate_crystal(xs, ys, angle):
     ys_new = np.cos(angle/180*np.pi) * ys + np.sin(angle/180*np.pi) * xs
     return xs_new, ys_new
 
-xs_f, ys_f = rotate_crystal(xs_f, ys_f, -4)
+xs_f, ys_f = rotate_crystal(xs_f, ys_f, -1)
 
-plt.figure(figsize=(6,6))
-plt.scatter(xs_f*1e6, ys_f*1e6, marker='o',s = 100)
+plt.plot(xs_f*1e6, ys_f*1e6, '.', markersize=16, color='royalblue', markeredgecolor='k')
 plt.title('Ion equilibrium position')
 plt.xlabel('x position in micron')
 plt.ylabel('y position in micron')
 plt.ylim(-30,30)
 plt.xlim(-30,30)
 plt.grid()
+plt.gca().set_aspect('equal')
 plt.show()
 
 # %% Transverse ("drumhead") mode calculation
@@ -135,7 +139,7 @@ def normal_modes(xs, ys, *constants):
                 diag += scale / np.sqrt((xs[i]-xs[j])**2+(ys[i]-ys[j])**2)**3
         matrix[i,i] += diag
 
-#     Add interaction cross terms 
+    # Add interaction cross terms 
     for i in range(N):
         for j in range(N):
             cross_term = 0
@@ -153,10 +157,15 @@ z_freqs = np.round(np.sqrt(np.abs(z_vals))/2/np.pi)
 z_freqs, np.round(z_vecs, 3)
 
 adjusted_freqs = (z_freqs - np.max(z_freqs))/1e3
-plt.vlines(adjusted_freqs, [0]*N, [2]*N)
-plt.title('Mode frequency - COM frequency')
-plt.xlabel('kHz')
+plt.vlines(0-z_freqs, [0]*N, [2]*N, color='red')
+plt.vlines(0, 0, 2, color='k')
+plt.vlines(z_freqs, [0]*N, [2]*N, color='blue')
+plt.grid()
+plt.title('Mode frequencies (red, carrier, and blue)')
+plt.xlabel('MHz')
 plt.show()
+
+print('mode frequencies (MHz)', z_freqs)
 
 # %% J_ij interaction rate calculations
 
@@ -173,8 +182,8 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = -2*np.pi * 1e3 + np.max(z_freqs)*2*np.pi
-omega = 2*np.pi / (2*8.2e-6)
+mu = 2*np.pi * 30e3 + np.max(z_freqs)*2*np.pi
+omega = 2*np.pi  * 110000
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
 
@@ -182,11 +191,11 @@ constants = (omega, m, hbar, dk)
 j_ijs = compute_Jijs(z_vecs, z_freqs*2*np.pi, mu, z_freqs*2*np.pi, *constants)
 
 # Plot radial plane
-i = 0
+i = 2
 interaction_rates = j_ijs[i,:]
 
 plt.figure(figsize=(6,6))
-plt.scatter(xs_f*1e6, ys_f*1e6, c=interaction_rates/1e3, cmap='jet', marker='o',s = 150)
+plt.scatter(xs_f*1e6, ys_f*1e6, c=interaction_rates/1e3, cmap='jet', marker='o', s=150)
 plt.title('Ion equilibrium positions')
 plt.xlabel(r'x position ($\mu$m)')
 plt.ylabel(r'y position ($\mu$m)')
@@ -196,6 +205,14 @@ plt.text(xs_f[i]*1e6 - 2, ys_f[i]*1e6 + 2, 'ith ion')
 plt.grid()
 plt.colorbar(label=r'$J_{ij}$ (kHz) from the ith ion')
 plt.show()
+
+j_ijs_normed = j_ijs / np.max(j_ijs)
+plt.imshow(j_ijs_normed)
+plt.title('Normalized J_ijs')
+plt.colorbar()
+plt.show()
+
+print('Normalized J_ijs', j_ijs_normed)
 
 
 # %% Compare distance to J_ij rate
@@ -209,7 +226,7 @@ for i in range(len(xs_f)):
 def poly(rs, a, b, c):
     return a/rs**b + c
 
-i=3
+i=1
 r_ijs_no_zeros = np.delete(r_ij[i,:]*1e6, i)
 j_ijs_no_zeros = np.delete(j_ijs[i,:]/1e3, i)
 
@@ -237,7 +254,7 @@ plt.show()
 from scipy.linalg import expm
 
 # N must be > 2
-N = 4
+N = 3
 
 sigma_x = np.array([[0,1],[1,0]])
 iden = np.eye(2,2)
@@ -266,9 +283,9 @@ for i in range(N):
 
 # Display Hamiltonian matrix
 plt.imshow(H_eff, cmap='jet')
+plt.title('Effective Hamiltonian')
 plt.colorbar()
 plt.show()
-
 
 # Plot energy spectrum
 e_vals, e_vecs = np.linalg.eig(H_eff)
@@ -293,11 +310,10 @@ plt.show()
 # %% Evolve H_eff over time
 
 # compute exponentiated operators
-ts = np.linspace(0, 30000, 1000)*1e-6
-state1 = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+ts = np.linspace(0, 3000, 1000)*1e-6
+state = (Zero^Zero^Zero).to_matrix()
 probs = []
 vecs = []
-state = state1
 
 probs = [np.abs(np.transpose(state) @ expm(-1.0j * t * H_eff) @ state)**2 for t in ts]
 plt.plot(ts*1e3, probs)
@@ -308,17 +324,26 @@ plt.show()
 
 probs_full = [np.abs(expm(-1.0j * t * H_eff) @ state)**2 for t in ts]
 probs_full = np.array(probs_full)
-state_labels = ['0000','0001','0010','0011','0100','0101','0110','0111','1000','1001','1010','1011','1100','1101','1110','1111']
+# state_labels = ['0000','0001','0010','0011','0100','0101','0110','0111','1000','1001','1010','1011','1100','1101','1110','1111']
+state_labels = ['000', '001', '010', '011', '100', '101', '110', '111']
 
 # display all states evolving over time
-plt.plot(ts*1e3, probs_full[:,0:16])
+plt.plot(ts*1e3, probs_full)
 plt.xlabel('time (ms)')
 plt.ylabel('probability')
 plt.legend(state_labels)
 plt.grid()
 plt.show()
 
+# display brightness of ions. compute sigma_z expectation value
 
+bright_full = probs_full[:,1] + probs_full[:,2] + 2*probs_full[:,3] + probs_full[:,4] + 2*probs_full[:,5] + 2 * probs_full[:,6] + 3 * probs_full[:,7]
+
+plt.plot(ts*1e3, bright_full)
+plt.xlabel('time (ms)')
+plt.ylabel('probability')
+plt.grid()
+plt.show()
 
 # plt.plot(ts*1e6, probs)
 # plt.plot(ts*1e6, np.cos(j_ijs[0,1]*ts)**2)
@@ -334,12 +359,7 @@ plt.show()
 # plt.grid()
 # plt.show()
 
+# %% Phase-space trajectories for MS gate
 
- # %% Phase-space trajectories for MS gate
-
-
-
-
-# %% Pulse shaping for MS gate
 
 
