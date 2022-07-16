@@ -1,4 +1,7 @@
-# Simulation of ion positions
+# Simulation of ion trajectories using the Floquet–Lyapunov transform/method
+# as outlined in the 2012 paper "Modes of oscillation in radiofrequency Paul traps"
+# and Appendix A of "An open-endcap blade trap for radial-2D ion crystals"
+# A walk through calculation
 
 import numpy as np
 
@@ -10,8 +13,10 @@ from scipy.optimize import minimize, curve_fit
 from numba import jit
 import time
 
-# %% Constants for Yb171+
+# %% Constants and parameters
 
+# Constants
+epsilon_0 = 8.8541878128e-12
 m = 170.936323 * 1.66054e-27  # ion mass
 e = 1.60217662e-19  # electron charge
 
@@ -21,41 +26,29 @@ z0 = 670e-6  # distance to dc electrodes
 kappa = 0.35  # geometric factor
 Omega_t = 2*np.pi * 21e6  # rf frequency
 
+# Pseudopotential harmonic frequencies
+wx = 2 * np.pi * 0.4e6
+wy = 2 * np.pi * 0.4e6
+wz = 2 * np.pi * 1.5e6
+print('alpha', wz/wx)
+
+# Number of ions
+N = 4
+
+
+
 
 # %% Axial confinement (z-direction)
-
-z_i = 1e-9  # initial ion position
-vz_i = 0  # initial ion speed
 
 U0 = 24.0
 
 omega_z = np.sqrt((2*e*kappa*U0) / (m*z0**2))
 print('axial harmonic frequency', omega_z/2/np.pi)
 
-# U is a vector such that z=U[0] and y=U[1]; returns [z', y']
-def dU_dt(U, t):
-    return [U[1], -omega_z**2*U[0]]
-
-U_initial = [z_i, vz_i]
-ts = np.linspace(0, 10, 800)*1e-6
-Us = odeint(dU_dt, U_initial, ts)
-zs = Us[:,0]
-
-plt.plot(ts, zs)
-plt.xlabel("t")
-plt.ylabel("z")
-plt.show()
-
-plt.plot(ts * 1e6, np.max(zs) * np.cos(omega_z * ts) * 1e9, '-b')
-plt.plot(ts * 1e6, zs * 1e9, '.r')
-plt.legend(['theory', 'ODE'])
-plt.xlabel(r'time ($\mu$s')
-plt.ylabel('distance (nanometers)')
-plt.title('z-axis motion')
-plt.grid()
-plt.show()
 
 # %% Radial confinement
+
+ts = np.linspace(0, 10, 800)*1e-6
 
 x_i = 1e-6  # initial ion position
 vx_i = 0  # initial ion speed
@@ -85,19 +78,6 @@ plt.title('x-axis motion')
 plt.grid()
 plt.show()
 
-# %% Ion crystal positions
-
-# constants
-epsilon_0 = 8.8541878128e-12
-
-# number of ions
-N = 7
-
-# harmonic frequencies
-wx = 2 * np.pi * 0.35e6
-wy = wx*1
-wz = 2 * np.pi * 0.895e6
-print('alpha', wz/wx)
 
 @jit(nopython=True, fastmath=True)
 def potential_energy(positions):

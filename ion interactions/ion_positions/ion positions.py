@@ -12,6 +12,8 @@ import time
 
 # %% Constants for Yb171+
 
+# Constants
+epsilon_0 = 8.8541878128e-12
 m = 170.936323 * 1.66054e-27  # ion mass
 e = 1.60217662e-19  # electron charge
 
@@ -86,9 +88,6 @@ plt.grid()
 plt.show()
 
 # %% Ion crystal positions
-
-# constants
-epsilon_0 = 8.8541878128e-12
 
 # number of ions
 N = 7

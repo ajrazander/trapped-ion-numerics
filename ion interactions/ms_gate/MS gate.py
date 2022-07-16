@@ -146,12 +146,14 @@ def normal_modes(xs, ys, *constants):
             if i != j:
                 cross_term = scale / np.sqrt((xs[i]-xs[j])**2+(ys[i]-ys[j])**2)**3
             matrix[i,j] -= cross_term
-    return matrix
+            
+    e_vals, e_vecs = np.linalg.eig(matrix)
+    return e_vals, e_vecs
 
 
 # Compute normal modes and frequencies
 constants = (e, epsilon_0, m)
-z_vals, z_vecs = np.linalg.eig(normal_modes(xs_f, ys_f, *constants))
+z_vals, z_vecs = normal_modes(xs_f, ys_f, *constants)
 
 z_freqs = np.round(np.sqrt(np.abs(z_vals))/2/np.pi)
 z_freqs, np.round(z_vecs, 3)
