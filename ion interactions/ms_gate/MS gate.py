@@ -13,6 +13,8 @@ from numba import jit
 import time
 
 # %% Constants for Yb171+
+
+# Constants
 m = 170.936323 * 1.66054e-27  # ion mass
 e = 1.60217662e-19  # electron charge
 epsilon_0 = 8.8541878128e-12
@@ -26,10 +28,10 @@ Omega_t = 2*np.pi * 21e6  # rf frequency
  
 # %% Ion crystal positions
 
-# number of ions
+# Number of ions
 N = 4
 
-# harmonic frequencies
+# Harmonic frequencies
 wx = 2 * np.pi * 0.4e6
 wy = 2 * np.pi * 0.4e6
 wz = 2 * np.pi * 1.03e6
@@ -170,10 +172,73 @@ plt.title('Mode frequencies (red, carrier, and blue)')
 plt.xlabel('MHz')
 plt.show()
 
+# Plot relative distance of modes from COM
+# plt.plot([0,1,1,2], np.sort(z_freqs) / np.max(z_freqs))
+# plt.grid()
+# plt.show()
+
 print('mode frequencies (MHz)', z_freqs)
 
 
-# %% J_ij interaction rate calculations
+# %% Build up normal mode "matricies
+
+# The MS J_ij terms are usually in a sum over mode. Here's let's rewrite that
+# in terms of matrices Bs
+
+Bs = []
+for v in z_vecs.T:
+    B = []
+    for b in v:
+        B.append(v * b)
+    # Replace diagonal with zeros
+    B = np.vstack(B)
+    np.fill_diagonal(B, 0)
+    Bs.append(B)
+
+# %% J_ij interaction rate calculations using eigenvector matrices
+
+def compute_Jijs(Bs, eig_vals, mu, wzs, *constants):
+    omega, m, hbar, dk = constants
+    prefactor = omega**2 * hbar * dk**2 / 2 / m
+    num_modes = len(eig_vals)
+    j_ijs = np.zeros((num_modes, num_modes))
+    for i in range(num_modes):
+        j_ijs += 1  / (mu**2 - eig_vals[i]**2) * Bs[i]
+    return prefactor * j_ijs
+
+mu = -2*np.pi * 120e3 + np.min(z_freqs)*2*np.pi
+omega = 2*np.pi  * 110e3
+hbar = 1.054571817e-34
+dk = np.sqrt(2) * 2*np.pi/ 355e-9
+
+constants = (omega, m, hbar, dk)
+j_ijs = compute_Jijs(Bs, z_freqs*2*np.pi, mu, z_freqs*2*np.pi, *constants)
+
+# Plot radial plane
+i = 0
+interaction_rates = j_ijs[i,:]
+
+plt.figure(figsize=(6,6))
+plt.scatter(xs_f*1e6, ys_f*1e6, c=interaction_rates/1e3, cmap='jet', marker='o', s=150)
+plt.title('Ion equilibrium positions')
+plt.xlabel(r'x position ($\mu$m)')
+plt.ylabel(r'y position ($\mu$m)')
+plt.ylim(-30,30)
+plt.xlim(-30,30)
+plt.text(xs_f[i]*1e6 - 2, ys_f[i]*1e6 + 2, 'ith ion')
+plt.grid()
+plt.colorbar(label=r'$J_{ij}$ (kHz) from the ith ion')
+plt.show()
+
+j_ijs_normed = j_ijs / np.max(j_ijs)
+plt.imshow(j_ijs_normed)
+plt.title('Normalized J_ijs')
+plt.colorbar()
+plt.show()
+
+print('Normalized J_ijs', j_ijs_normed)
+
+# %% J_ij interaction rate calculations using eigenvector elements
 
 def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
     omega, m, hbar, dk = constants
@@ -188,8 +253,8 @@ def compute_Jijs(eig_vecs, eig_vals, mu, wzs, *constants):
             j_ijs[i,j] = mode_sum
     return prefactor * j_ijs
 
-mu = 2*np.pi * 30e3 + np.max(z_freqs)*2*np.pi
-omega = 2*np.pi  * 110000
+mu = 2*np.pi * 50e3 + np.max(z_freqs)*2*np.pi
+omega = 2*np.pi  * 110e3
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
 
