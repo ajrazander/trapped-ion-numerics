@@ -206,7 +206,7 @@ def compute_Jijs(Bs, eig_vals, mu, wzs, *constants):
         j_ijs += 1  / (mu**2 - eig_vals[i]**2) * Bs[i]
     return prefactor * j_ijs
 
-mu = -2*np.pi * 120e3 + np.min(z_freqs)*2*np.pi
+mu = 2*np.pi * 120e3 + np.min(z_freqs)*2*np.pi
 omega = 2*np.pi  * 110e3
 hbar = 1.054571817e-34
 dk = np.sqrt(2) * 2*np.pi/ 355e-9
